@@ -1,6 +1,8 @@
 package com.test.fcm;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -8,6 +10,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.os.Build;
+import android.provider.Settings;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
@@ -26,17 +32,24 @@ import android.widget.Toast;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.test.fcm.config.Config;
+import com.test.fcm.utils.NotificationHelper;
 import com.test.fcm.utils.NotificationUtils;
+
+import static android.os.Build.*;
 
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private BroadcastReceiver mRegistrationBroadcastReceiver;
-    private TextView txtRegId, txtMessage,tvTitle;
+    private TextView txtRegId, txtMessage, tvTitle;
     private NotificationUtils notificationUtils;
+    private NotificationManager manager;
 
     private Toolbar toolbar;
+    private static final int NOTI_PRIMARY1 = 1100;
+    private static final int NOTI_PRIMARY2 = 1101;
+    private NotificationHelper noti;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
         txtMessage = findViewById(R.id.txt_push_message);
         toolbar = findViewById(R.id.layout_top);
         setSupportActionBar(toolbar);
-        tvTitle=findViewById(R.id.tv_notif_title);
+        tvTitle = findViewById(R.id.tv_notif_title);
 
         mRegistrationBroadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -67,31 +80,17 @@ public class MainActivity extends AppCompatActivity {
                     String message = intent.getStringExtra("message");
                     txtMessage.setText(message);
 
-
-                    // top notification
-                    /*NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this);
-                    builder.setSmallIcon(R.mipmap.ic_launcher_round)
-                            .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher_foreground))
-                            .setColor(getResources().getColor(R.color.colorPrimary))
-                            .setContentTitle(message)
-                            .setContentText(strTitle)
-                            .setDefaults(Notification.DEFAULT_ALL)
-                            .setPriority(NotificationManager.IMPORTANCE_HIGH);
-
-                    builder.setAutoCancel(false);
-                    NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                    mNotificationManager.notify(0, builder.build());*/
-
-                    final LinearLayout ll=findViewById(R.id.notif);
+                    final LinearLayout ll = findViewById(R.id.notif);
                     tvTitle.setText(message);
                     ll.setVisibility(View.VISIBLE);
-                    Animation animation= AnimationUtils.loadAnimation(MainActivity.this,R.anim.top_sheet_slide_in);
+                    Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.top_sheet_slide_in);
                     animation.setDuration(500);
                     ll.setAnimation(animation);
                     ll.animate();
                     animation.start();
+                    noti = new NotificationHelper(MainActivity.this);
 
-                    final Animation animationout= AnimationUtils.loadAnimation(MainActivity.this,R.anim.top_sheet_slide_out);
+                    final Animation animationout = AnimationUtils.loadAnimation(MainActivity.this, R.anim.top_sheet_slide_out);
                     animationout.setDuration(500);
                     animationout.setStartOffset(5000);
 
@@ -116,8 +115,6 @@ public class MainActivity extends AppCompatActivity {
                     });
 
 
-
-
                     animationout.setAnimationListener(new Animation.AnimationListener() {
                         @Override
                         public void onAnimationStart(Animation animation) {
@@ -134,13 +131,32 @@ public class MainActivity extends AppCompatActivity {
 
                         }
                     });
+                    try {
 
-
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
 
                 }
             }
         };
         displayFirebaseRegId();
+
+        // android o notification chanel
+        try {
+
+            if (VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                goToNotificationSettings(NotificationHelper.PRIMARY_CHANNEL);
+                Notification.Builder nb = new Notification.Builder(MainActivity.this, "default");
+                synchronized (nb) {
+                    nb.notify();
+                }
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -155,6 +171,28 @@ public class MainActivity extends AppCompatActivity {
         else
             txtRegId.setText("Firebase Reg Id is not received yet!");
     }
+
+    /**
+     * Send Intent to load system Notification Settings for this app.
+     */
+    public void goToNotificationSettings() {
+        Intent i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+        i.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+        startActivity(i);
+    }
+
+    /**
+     * Send intent to load system Notification Settings UI for a particular channel.
+     *
+     * @param channel Name of channel to configure
+     */
+    public void goToNotificationSettings(String channel) {
+        Intent i = new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS);
+        i.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+        i.putExtra(Settings.EXTRA_CHANNEL_ID, channel);
+        startActivity(i);
+    }
+
 
     @Override
     protected void onResume() {
@@ -177,5 +215,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mRegistrationBroadcastReceiver);
         super.onPause();
+    }
+
+
+    private NotificationManager getManager() {
+        if (manager == null) {
+            manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        }
+        return manager;
     }
 }

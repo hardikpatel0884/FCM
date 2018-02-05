@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
@@ -20,6 +21,7 @@ import com.google.firebase.messaging.RemoteMessage;
 import com.test.fcm.MainActivity;
 import com.test.fcm.R;
 import com.test.fcm.config.Config;
+import com.test.fcm.utils.NotificationHelper;
 import com.test.fcm.utils.NotificationUtils;
 
 import org.json.JSONException;
@@ -28,7 +30,6 @@ import org.json.JSONObject;
 /**
  * Created by lcom151-one on 2/2/2018.
  */
-
 
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
@@ -47,7 +48,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         // Check if message contains a notification payload.
         if (remoteMessage.getNotification() != null) {
             Log.e(TAG, "Notification Body: " + remoteMessage.getNotification().getBody());
-            handleNotification(remoteMessage.getNotification().getBody());
+            handleNotification(remoteMessage.getNotification().getBody(), remoteMessage.getNotification().getTitle());
         }
 
         // Check if message contains a data payload.
@@ -63,11 +64,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    private void handleNotification(String message) {
+    private void handleNotification(String message, String title) {
         if (!NotificationUtils.isAppIsInBackground(getApplicationContext())) {
             // app is in foreground, broadcast the push message
             Intent pushNotification = new Intent(Config.PUSH_NOTIFICATION);
             pushNotification.putExtra("message", message);
+            pushNotification.putExtra("title", title);
             LocalBroadcastManager.getInstance(this).sendBroadcast(pushNotification);
 
             // play notification sound
@@ -75,16 +77,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             notificationUtils.playNotificationSound();
 
 
-        }else{
+        } else {
             // If the app is in background, firebase itself handles the notification
 
-            Intent pushNotification = new Intent(Config.PUSH_NOTIFICATION);
+            /*Intent pushNotification = new Intent(Config.PUSH_NOTIFICATION);
             pushNotification.putExtra("message", message);
             LocalBroadcastManager.getInstance(this).sendBroadcast(pushNotification);
 
             // play notification sound
             NotificationUtils notificationUtils = new NotificationUtils(getApplicationContext());
-            notificationUtils.playNotificationSound();
+            notificationUtils.playNotificationSound();*/
         }
     }
 
@@ -114,6 +116,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                 Intent pushNotification = new Intent(Config.PUSH_NOTIFICATION);
                 pushNotification.putExtra("message", message);
+                pushNotification.putExtra("title", title);
                 LocalBroadcastManager.getInstance(this).sendBroadcast(pushNotification);
 
                 // play notification sound
@@ -121,16 +124,26 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 notificationUtils.playNotificationSound();
             } else {
                 // app is in background, show the notification in notification tray
-                Intent resultIntent = new Intent(getApplicationContext(), MainActivity.class);
-                resultIntent.putExtra("message", message);
 
-                // check for image attachment
-                if (TextUtils.isEmpty(imageUrl)) {
-                    showNotificationMessage(getApplicationContext(), title, message, timestamp, resultIntent);
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    NotificationHelper noti = new NotificationHelper(getApplicationContext());
+                    Notification.Builder nb = noti.getNotification1(title != null ? title : "FCM", message);
+                    noti.notify(100, nb);
                 } else {
-                    // image is present, show notification with image
-                    showNotificationMessageWithBigImage(getApplicationContext(), title, message, timestamp, resultIntent, imageUrl);
+                    Intent resultIntent = new Intent(getApplicationContext(), MainActivity.class);
+                    resultIntent.putExtra("message", message);
+                    resultIntent.putExtra("title", title);
+
+                    // check for image attachment
+                    if (TextUtils.isEmpty(imageUrl)) {
+                        showNotificationMessage(getApplicationContext(), title != null ? title : "FCM", message, timestamp, resultIntent);
+                    } else {
+                        // image is present, show notification with image
+                        showNotificationMessageWithBigImage(getApplicationContext(), title != null ? title : "FCM", message, timestamp, resultIntent, imageUrl);
+                    }
                 }
+
             }
         } catch (JSONException e) {
             Log.e(TAG, "Json Exception: " + e.getMessage());

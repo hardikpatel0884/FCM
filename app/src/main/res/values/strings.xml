@@ -3,5 +3,8 @@
     <string name="default_notification_channel_id">120</string>
 
     <string name="top_sheet_behavior" translatable="false">com.test.fcm.utils.TopSheetBehavior</string>
+    <string name="nitification_chanel">FCM HP</string>
+    <string name="noti_channel_default">FCM Notification</string>
+    <string name="primary1_body">primary</string>
 
 </resources>
