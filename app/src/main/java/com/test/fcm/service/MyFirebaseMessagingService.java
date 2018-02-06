@@ -27,6 +27,8 @@ import com.test.fcm.utils.NotificationUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Objects;
+
 /**
  * Created by lcom151-one on 2/2/2018.
  */
@@ -78,15 +80,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
 
         } else {
-            // If the app is in background, firebase itself handles the notification
-
-            /*Intent pushNotification = new Intent(Config.PUSH_NOTIFICATION);
-            pushNotification.putExtra("message", message);
-            LocalBroadcastManager.getInstance(this).sendBroadcast(pushNotification);
-
-            // play notification sound
-            NotificationUtils notificationUtils = new NotificationUtils(getApplicationContext());
-            notificationUtils.playNotificationSound();*/
+            // If the app is in background, firebase itself handles the notification);*/
         }
     }
 
@@ -95,13 +89,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         try {
             JSONObject data = json.getJSONObject("data");
-
             String title = data.getString("title");
             String message = data.getString("message");
             boolean isBackground = data.getBoolean("is_background");
             String imageUrl = data.getString("image");
             String timestamp = data.getString("timestamp");
             JSONObject payload = data.getJSONObject("payload");
+
+            if (TextUtils.isEmpty(title)) {
+                title="FCM";
+            }
 
             Log.e(TAG, "title: " + title);
             Log.e(TAG, "message: " + message);
@@ -137,10 +134,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     // check for image attachment
                     if (TextUtils.isEmpty(imageUrl)) {
-                        showNotificationMessage(getApplicationContext(), title != null ? title : "FCM", message, timestamp, resultIntent);
+                        showNotificationMessage(getApplicationContext(), title, message, timestamp, resultIntent);
                     } else {
                         // image is present, show notification with image
-                        showNotificationMessageWithBigImage(getApplicationContext(), title != null ? title : "FCM", message, timestamp, resultIntent, imageUrl);
+                        showNotificationMessageWithBigImage(getApplicationContext(), title, message, timestamp, resultIntent, imageUrl);
                     }
                 }
 

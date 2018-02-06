@@ -1,28 +1,18 @@
 package com.test.fcm;
 
-import android.annotation.SuppressLint;
-import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.os.Build;
+import android.os.Bundle;
 import android.provider.Settings;
-import android.support.annotation.RequiresApi;
-import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -30,12 +20,14 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.test.fcm.TopSheet.TopSheetBehavior;
 import com.test.fcm.config.Config;
-import com.test.fcm.utils.NotificationHelper;
 import com.test.fcm.utils.NotificationUtils;
-
-import static android.os.Build.*;
+import com.test.fcm.TopSheet.TopSheetDialog;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -47,21 +39,36 @@ public class MainActivity extends AppCompatActivity {
     private NotificationManager manager;
 
     private Toolbar toolbar;
-    private static final int NOTI_PRIMARY1 = 1100;
-    private static final int NOTI_PRIMARY2 = 1101;
-    private NotificationHelper noti;
+    private AdView mAdView;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        try{
+            /*TopSheetDialog dialog=new TopSheetDialog(MainActivity.this);
+            dialog.setTitle("hello this is example");
+            dialog.setContentView(R.layout.top_sheet);
+            dialog.show();*/
+
+            /*View sheet = findViewById(R.id.top_sheet);
+            TopSheetBehavior.from(sheet).setState(TopSheetBehavior.STATE_EXPANDED);*/
+
+            MobileAds.initialize(MainActivity.this,"ca-app-pub-3450186517294143~3695997196");
+            mAdView = findViewById(R.id.adView);
+            AdRequest adRequest = new AdRequest.Builder().build();
+            mAdView.loadAd(adRequest);
+
+        }catch (Exception e){e.printStackTrace();}
+
         txtRegId = findViewById(R.id.txt_reg_id);
         txtMessage = findViewById(R.id.txt_push_message);
         toolbar = findViewById(R.id.layout_top);
         setSupportActionBar(toolbar);
         tvTitle = findViewById(R.id.tv_notif_title);
-
+    onNewIntent(getIntent());
         mRegistrationBroadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -88,7 +95,6 @@ public class MainActivity extends AppCompatActivity {
                     ll.setAnimation(animation);
                     ll.animate();
                     animation.start();
-                    noti = new NotificationHelper(MainActivity.this);
 
                     final Animation animationout = AnimationUtils.loadAnimation(MainActivity.this, R.anim.top_sheet_slide_out);
                     animationout.setDuration(500);
@@ -141,23 +147,6 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         displayFirebaseRegId();
-
-        // android o notification chanel
-        try {
-
-            if (VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                goToNotificationSettings(NotificationHelper.PRIMARY_CHANNEL);
-                Notification.Builder nb = new Notification.Builder(MainActivity.this, "default");
-                synchronized (nb) {
-                    nb.notify();
-                }
-
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
     }
 
     private void displayFirebaseRegId() {
@@ -198,6 +187,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+
         // register GCM registration complete receiver
         LocalBroadcastManager.getInstance(this).registerReceiver(mRegistrationBroadcastReceiver,
                 new IntentFilter(Config.REGISTRATION_COMPLETE));
@@ -209,6 +199,17 @@ public class MainActivity extends AppCompatActivity {
 
         // clear the notification area when the app is opened
         NotificationUtils.clearNotifications(getApplicationContext());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Bundle bundle=intent.getExtras();
+        if(bundle!=null){
+            if(bundle.containsKey("message")){
+                Toast.makeText(this, "mes "+bundle.getString("message"), Toast.LENGTH_SHORT).show();
+                txtMessage.setText(bundle.getString("message"));
+            }
+        }
     }
 
     @Override
